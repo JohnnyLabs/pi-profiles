@@ -1,15 +1,15 @@
 import { spawn } from "node:child_process";
 import { constants } from "node:os";
+import { join } from "node:path";
 
 export function launch(profilePath: string, piArgs: string[]): void {
-  const env = { ...process.env, PI_CODING_AGENT_DIR: profilePath };
+  const env = {
+    ...process.env,
+    PI_CODING_AGENT_DIR: profilePath,
+    PI_CODING_AGENT_SESSION_DIR: join(profilePath, "sessions"),
+  };
   const child = spawn("pi", piArgs, { env, stdio: "inherit" });
 
-  // SIGINT is delivered to the entire foreground process group when the child
-  // shares the parent's TTY (stdio: "inherit"), so both parent and child
-  // receive it simultaneously. We must NOT forward it — that would double-
-  // signal the child. SIGTERM and SIGHUP are sent to the parent specifically,
-  // so those we forward.
   for (const sig of ["SIGTERM", "SIGHUP"] as const) {
     process.on(sig, () => child.kill(sig));
   }
@@ -26,7 +26,6 @@ export function launch(profilePath: string, piArgs: string[]): void {
     if (code !== null) {
       process.exit(code);
     }
-    // Child was killed by a signal — convention is 128 + signal number.
     const sigNum = signal ? (constants.signals[signal] ?? 1) : 1;
     process.exit(128 + sigNum);
   });

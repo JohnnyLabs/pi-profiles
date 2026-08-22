@@ -6,6 +6,7 @@ export function cmdCreate(args: string[]): void {
   let fromBase = false;
   let shareAuth = true;
   let shareModels = true;
+  let shareSessions = true;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -17,6 +18,8 @@ export function cmdCreate(args: string[]): void {
       shareAuth = false;
     } else if (arg === "--own-models") {
       shareModels = false;
+    } else if (arg === "--own-sessions") {
+      shareSessions = false;
     } else if (!arg.startsWith("-")) {
       positionals.push(arg);
     }
@@ -25,14 +28,20 @@ export function cmdCreate(args: string[]): void {
   const name = positionals[0];
   if (!name) {
     console.error(
-      "Usage: ppi create <name> [--from <profile>] [--from-base] [--own-auth] [--own-models]"
+      "Usage: ppi create <name> [--from <profile>] [--from-base] [--own-auth] [--own-models] [--own-sessions]"
     );
     process.exit(1);
   }
 
   const pm = createProfileManager();
   try {
-    pm.create(name, { from: fromProfile, fromBase, shareAuth, shareModels });
+    pm.create(name, {
+      from: fromProfile,
+      fromBase,
+      shareAuth,
+      shareModels,
+      shareSessions,
+    });
     const source = fromProfile ? ` from "${fromProfile}"` : fromBase ? " from base" : "";
     console.log(`Created "${name}"${source} at ${pm.resolve(name).path}`);
   } catch (err) {

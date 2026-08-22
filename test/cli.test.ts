@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync, readFileSync, existsSync, mkdtempSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync, readFileSync, existsSync, mkdtempSync, lstatSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -77,6 +77,14 @@ describe("CLI", () => {
     result = run(["list"], root);
     assert.ok(result.stdout.includes("*"));
     assert.ok(result.stdout.includes("work"));
+  });
+
+  it("create --own-sessions creates an independent session store", () => {
+    const result = run(["create", "work", "--own-sessions"], root);
+    assert.equal(result.status, 0);
+
+    const sessionsPath = join(root, "profiles", "work", "sessions");
+    assert.ok(!lstatSync(sessionsPath).isSymbolicLink());
   });
 
   it("create --from copies profile", () => {

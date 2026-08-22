@@ -29,6 +29,7 @@ Profile management:
 Create options:
   --own-auth                                Independent auth (copy, not symlink)
   --own-models                              Independent models (copy, not symlink)
+  --own-sessions                            Independent session history
 
 Options:
   --help, -h                                Show this help message

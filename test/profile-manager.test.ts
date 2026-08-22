@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import {
   mkdirSync, rmSync, writeFileSync, existsSync,
-  readFileSync, lstatSync, readdirSync, symlinkSync, mkdtempSync,
+  readFileSync, lstatSync, readdirSync, symlinkSync, mkdtempSync, readlinkSync,
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -135,7 +135,7 @@ describe("ProfileManager", () => {
   });
 
   describe("create (blank)", () => {
-    it("scaffolds a blank profile with symlinked auth and models", () => {
+    it("scaffolds a blank profile with symlinked auth, models, and sessions", () => {
       writeFileSync(join(root, "agent", "auth.json"), '{"token":"abc"}');
       writeFileSync(join(root, "agent", "models.json"), '{"models":[]}');
 
@@ -148,8 +148,13 @@ describe("ProfileManager", () => {
 
       assert.ok(lstatSync(join(profileDir, "auth.json")).isSymbolicLink());
       assert.ok(lstatSync(join(profileDir, "models.json")).isSymbolicLink());
+      assert.ok(lstatSync(join(profileDir, "sessions")).isSymbolicLink());
+      assert.equal(
+        readlinkSync(join(profileDir, "sessions")),
+        join(root, "agent", "sessions")
+      );
 
-      for (const dir of ["extensions", "skills", "tools", "prompts", "sessions"]) {
+      for (const dir of ["extensions", "skills", "tools", "prompts"]) {
         assert.ok(existsSync(join(profileDir, dir)), `${dir}/ should exist`);
       }
     });
@@ -176,6 +181,14 @@ describe("ProfileManager", () => {
       assert.ok(!lstatSync(modelsPath).isSymbolicLink());
       assert.deepEqual(JSON.parse(readFileSync(modelsPath, "utf-8")), { models: [] });
       assert.ok(lstatSync(join(root, "profiles", "work", "auth.json")).isSymbolicLink());
+    });
+
+    it("creates with shareSessions: false (real directory instead of symlink)", () => {
+      pm.create("work", { shareSessions: false });
+
+      const sessionsPath = join(root, "profiles", "work", "sessions");
+      assert.ok(!lstatSync(sessionsPath).isSymbolicLink());
+      assert.deepEqual(readdirSync(sessionsPath), []);
     });
 
     it("throws if profile already exists", () => {
@@ -212,6 +225,7 @@ describe("ProfileManager", () => {
       );
       assert.ok(existsSync(join(destDir, "extensions", "my-ext.ts")));
       assert.ok(existsSync(join(destDir, "sessions")));
+      assert.ok(lstatSync(join(destDir, "sessions")).isSymbolicLink());
       assert.deepEqual(readdirSync(join(destDir, "sessions")), []);
     });
 
@@ -316,7 +330,7 @@ describe("ProfileManager", () => {
       assert.ok(lstatSync(join(root, "profiles", "work", "models.json")).isSymbolicLink());
     });
 
-    it("excludes sessions contents from stock", () => {
+    it("shares stock sessions by default", () => {
       writeFileSync(join(root, "agent", "settings.json"), "{}");
       mkdirSync(join(root, "agent", "sessions"), { recursive: true });
       writeFileSync(join(root, "agent", "sessions", "old.json"), "{}");
@@ -324,7 +338,19 @@ describe("ProfileManager", () => {
       pm.create("work", { fromBase: true });
 
       const sessionsDir = join(root, "profiles", "work", "sessions");
-      assert.ok(existsSync(sessionsDir));
+      assert.ok(lstatSync(sessionsDir).isSymbolicLink());
+      assert.deepEqual(readdirSync(sessionsDir), ["old.json"]);
+    });
+
+    it("creates isolated empty sessions with shareSessions: false", () => {
+      writeFileSync(join(root, "agent", "settings.json"), "{}");
+      mkdirSync(join(root, "agent", "sessions"), { recursive: true });
+      writeFileSync(join(root, "agent", "sessions", "old.json"), "{}");
+
+      pm.create("work", { fromBase: true, shareSessions: false });
+
+      const sessionsDir = join(root, "profiles", "work", "sessions");
+      assert.ok(!lstatSync(sessionsDir).isSymbolicLink());
       assert.deepEqual(readdirSync(sessionsDir), []);
     });
 

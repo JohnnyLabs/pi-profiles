@@ -14,6 +14,8 @@ export interface CreateOpts {
   shareAuth?: boolean;
   /** Symlink models.json from stock pi config. Default: true. */
   shareModels?: boolean;
+  /** Share sessions with stock pi config. Default: true. */
+  shareSessions?: boolean;
   /** Name of an existing profile to copy from. */
   from?: string;
   /** Copy from the stock ~/.pi/agent/ directory. */

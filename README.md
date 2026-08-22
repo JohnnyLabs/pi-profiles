@@ -1,18 +1,21 @@
 # pi-profiles
 
 Configuration profile manager for [pi](https://pi.dev). Switch between
-independent sets of settings, extensions, skills, themes, and auth with a
-single command.
+sets of settings, extensions, skills, themes, and auth with a single command.
+Sessions are shared with stock Pi by default so profile switching keeps one
+continuous history.
 
 Inspired by [chemacs](https://github.com/plexus/chemacs2) (Emacs profile
 switcher) and Neovim's `NVIM_APPNAME`.
 
 ## How it works
 
-Pi resolves its configuration directory via `PI_CODING_AGENT_DIR`. `ppi`
-creates and manages profile directories under `~/.pi/profiles/<name>/`,
-then launches pi with the env var pointed at the chosen profile. Pi doesn't
-know it's being wrapped - the TUI renders directly through inherited stdio.
+Pi resolves its configuration directory via `PI_CODING_AGENT_DIR` and its
+session storage via `PI_CODING_AGENT_SESSION_DIR`. `ppi` creates and manages
+profile directories under `~/.pi/profiles/<name>/`, then launches Pi with both
+environment variables pointed at the selected profile. Shared profiles expose
+`<profile>/sessions` as a symlink to `~/.pi/agent/sessions`, while
+`--own-sessions` creates a real per-profile session directory.
 
 ## Install
 
@@ -29,6 +32,7 @@ have pi).
 # Create a profile
 ppi create work
 ppi create personal --own-auth    # independent API key
+ppi create scratch --own-sessions   # independent session history
 
 # Create from your current pi config
 ppi create work --from-base
@@ -65,21 +69,28 @@ Each profile is a complete pi agentDir:
 ├── skills/
 ├── tools/
 ├── prompts/
-└── sessions/
+└── sessions → ~/.pi/agent/sessions       (symlink by default)
 ```
 
-Auth and models are symlinked from the stock pi config by default, so one
-`pi login` works everywhere. Pass `--own-auth` or `--own-models` to `create` for independent
-credentials.
+Auth, models, and sessions are shared from the stock Pi config by default, so
+one `pi login` and one session history work everywhere. Pass `--own-auth`,
+`--own-models`, or `--own-sessions` to `create` when a profile needs its own
+copy/store.
+
+Existing profiles created by upstream `ppi` keep their previous behavior:
+a real `<profile>/sessions/` directory remains isolated. Newly created profiles
+share sessions unless `--own-sessions` is supplied.
 
 ## Goals
 
-- **Full isolation.** Each profile is its own agentDir - settings,
-  extensions, skills, themes, auth, sessions, prompts. Switching profiles
-  means switching everything.
+- **Isolated configuration, shared state by default.** Each profile is its
+  own agentDir for settings, extensions, skills, themes, and prompts. Auth,
+  models, and sessions are shared unless their corresponding `--own-*` option
+  is requested.
 
-- **Zero pi modifications.** Works entirely through the documented
-  `PI_CODING_AGENT_DIR` env var and convention. No patches, no forks.
+- **Zero Pi modifications.** Works through Pi's documented
+  `PI_CODING_AGENT_DIR` and `PI_CODING_AGENT_SESSION_DIR` environment
+  variables. No Pi patches are required.
 
 - **Zero runtime dependencies.** Pure Node.js filesystem operations.
   Hand-rolled arg parser. Nothing to install beyond this package.
